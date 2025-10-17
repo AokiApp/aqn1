@@ -18,7 +18,7 @@ operation
   / "." _ "tag" _ "(" _ t:number _ ")" _ { return { type: "tag", value: t }; }
 
 modifier
-  = "@" _ m:("tlv" / "int" / "count" / "utf8" / "hex" / "auto") _ { return { type: "modifier", value: m }; }
+  = "@" _ m:("tlvhex" / "tlv" / "int" / "count" / "utf8" / "hex" / "auto" / "type") _ { return { type: "modifier", value: m }; }
 
 number
   = hexNumber

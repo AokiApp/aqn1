@@ -141,6 +141,50 @@ function concatBuffers(chunks: Uint8Array[]): Uint8Array {
   return out;
 }
 
+/** Return ASN.1 type name for a TLV node's tag. */
+function typeStringFor(n: TLVNode): string {
+  const tag = n.tag;
+  const tagNum = tag & 0x1f;
+  const cls = (tag & 0xc0) >> 6;
+  if (cls === 0) {
+    // UNIVERSAL
+    const universal: Record<number, string> = {
+      0x01: "BOOLEAN",
+      0x02: "INTEGER",
+      0x03: "BIT STRING",
+      0x04: "OCTET STRING",
+      0x05: "NULL",
+      0x06: "OBJECT IDENTIFIER",
+      0x0c: "UTF8String",
+      0x10: "SEQUENCE",
+      0x11: "SET",
+      0x12: "NumericString",
+      0x13: "PrintableString",
+      0x14: "TeletexString",
+      0x15: "VideotexString",
+      0x16: "IA5String",
+      0x17: "UTCTime",
+      0x18: "GeneralizedTime",
+      0x19: "GraphicString",
+      0x1a: "VisibleString",
+      0x1b: "GeneralString",
+      0x1e: "BMPString",
+    };
+    if (universal[tagNum]) return universal[tagNum];
+    if (tagNum === 0x1f) return "Universal(LongForm)";
+    return `Universal(${tagNum})`;
+  } else if (cls === 1) {
+    // APPLICATION
+    return `[APPLICATION ${tagNum}]`;
+  } else if (cls === 2) {
+    // CONTEXT-SPECIFIC
+    return `[${tagNum}]`;
+  } else {
+    // PRIVATE
+    return `[PRIVATE ${tagNum}]`;
+  }
+}
+
 /** Decide automatic modifier based on tag and content. */
 export function autoModifierFor(node: TLVNode): Exclude<Modifier, null | "auto"> {
   const t = node.tag;
@@ -187,8 +231,16 @@ export function renderSelection(selection: TLVNode[], modifier: Modifier): { bin
         lines.push(toHex(headerPlusValue(n)));
         break;
       }
+      case "tlvhex": {
+        lines.push(toHex(headerPlusValue(n)));
+        break;
+      }
       case "count": {
         lines.push(n.children ? String(n.children.length) : "0");
+        break;
+      }
+      case "type": {
+        lines.push(typeStringFor(n));
         break;
       }
     }

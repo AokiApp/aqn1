@@ -23,11 +23,14 @@ function runSample(query: string) {
 function main() {
   const samples = [
     '.index(0).index(0x1)@tlv',
+    '.index(0)@tlvhex',
     '.tag(0x02)@int',
+    '.tag(0x02)@type',
     '.tag(0xa0).index(1).tag(0x04)@hex',
     '.tag(0x16)@utf8',
     '@utf8',
     '@auto',
+    '@type',
   ];
   for (const q of samples) {
     runSample(q);
