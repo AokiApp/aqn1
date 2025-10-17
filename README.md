@@ -23,6 +23,7 @@ An AQN1 query consists of
 
 - `.index(n)`: Selects the nth element. Indices are zero-based.
 - `.tag(t)`: Selects the first element with the specified tag `t`. Tags can be specified in decimal or hexadecimal (e.g., `0x02` for INTEGER).
+- `.decode()`: If OCTET STRING or BIT STRING is selected, decodes its content as ASN.1 and selects the resulting structure.
 
 ### Modifiers
 

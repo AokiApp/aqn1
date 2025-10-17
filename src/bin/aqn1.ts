@@ -16,6 +16,7 @@ Options:
 
 Examples:
   aqn1 ".index(0).tag(0x02)@int" < data.asn1
+  aqn1 ".tag(0x04).decode()@count" < data.asn1
   aqn1 "@utf8" < data.asn1
   aqn1 "@auto" < data.asn1
 `);

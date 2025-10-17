@@ -28,6 +28,7 @@ function main() {
     '.tag(0x02)@type',
     '.tag(0xa0).index(1).tag(0x04)@hex',
     '.tag(0x16)@utf8',
+    '.tag(0x04).decode()@count',
     '@utf8',
     '@auto',
     '@type',

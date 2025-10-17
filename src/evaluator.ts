@@ -16,7 +16,7 @@
  *  - Selection is always a single node.
  */
 
-import { parseQuery, Query, Selector, isIndexSelector, isTagSelector, Modifier } from "./index.js";
+import { parseQuery, Query, Selector, isIndexSelector, isTagSelector, isDecodeSelector, Modifier } from "./index.js";
 
 // Tag class enum as strings for display
 type TagClassName = "UNIVERSAL" | "APPLICATION" | "CONTEXT" | "PRIVATE";
@@ -350,6 +350,39 @@ function select(root: TLVNode, selectors: Selector[]): TLVNode {
         throw new Error(`Tag Not Found: 0x${sel.value.toString(16)}`);
       }
       current = found;
+    } else if (isDecodeSelector(sel)) {
+      // Decode inner ASN.1 TLVs from OCTET STRING or BIT STRING content
+      if (!(current.tagClass === "UNIVERSAL" && (current.tagNumber === 4 || current.tagNumber === 3))) {
+        throw new Error("Value Error: Selected element is not OCTET STRING or BIT STRING");
+      }
+      let inner = current.contentBytes;
+      if (current.tagNumber === 3) {
+        // BIT STRING: first byte is 'unused bits' count
+        if (inner.length < 1) {
+          throw new Error("Value Error: BIT STRING has no content to decode");
+        }
+        inner = inner.slice(1);
+      }
+      let children: TLVNode[];
+      try {
+        children = parseTLVStream(inner);
+      } catch (e: any) {
+        throw new Error("Value Error: Failed to decode inner ASN.1 content");
+      }
+      const syntheticDecodedRoot: TLVNode = {
+        offset: current.offset,
+        tagFirstOctet: 0x00,
+        tagClass: "UNIVERSAL",
+        constructed: true,
+        tagNumber: 0,
+        length: inner.length,
+        indefinite: false,
+        headerBytes: new Uint8Array(0),
+        contentBytes: inner,
+        fullBytes: inner,
+        children,
+      };
+      current = syntheticDecodedRoot;
     } else {
       throw new Error("Invalid Query Syntax: Unknown selector");
     }

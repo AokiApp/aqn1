@@ -18,7 +18,10 @@ export interface TagSelector {
   type: "tag";
   value: number;
 }
-export type Selector = IndexSelector | TagSelector;
+export interface DecodeSelector {
+  type: "decode";
+}
+export type Selector = IndexSelector | TagSelector | DecodeSelector;
 
 /** Root AST node returned by the Peggy parser */
 export interface Query {
@@ -59,4 +62,7 @@ export function isIndexSelector(sel: Selector): sel is IndexSelector {
 }
 export function isTagSelector(sel: Selector): sel is TagSelector {
   return sel.type === "tag";
+}
+export function isDecodeSelector(sel: Selector): sel is DecodeSelector {
+  return sel.type === "decode";
 }
