@@ -7,7 +7,7 @@ import {
 } from "./aqn1parser.gen.js";
 
 /** Modifier type specifies output transformation modifiers. */
-export type Modifier = "tlv" | "tlvhex" | "int" | "count" | "utf8" | "hex" | "auto" | "type" | null;
+export type Modifier = "tlv" | "tlvhex" | "int" | "count" | "utf8" | "hex" | "auto" | "type" | "pretty" | null;
 
 /** Selector discriminated unions */
 export interface IndexSelector {
@@ -32,17 +32,21 @@ export interface Query {
  * On invalid syntax, throws Peggy SyntaxError containing location information.
  */
 export function parseQuery(input: string): Query {
-  // Peggy parser returns the AST according to aqn1.peggy grammar.
-  // grammarSource is useful in formatted error messages.
+  // Preprocess to support modifiers not yet in the Peggy grammar (e.g., "@pretty").
+  // Replace "@pretty" with a recognized placeholder (e.g., "@type") for parsing,
+  // then restore the intended modifier in the returned AST.
+  const original = input;
+  const replaced = original.replace(/@(\s*)pretty\b/gi, "@$1type");
   try {
-    return pegParse(input, { grammarSource: "aqn1.peggy" }) as Query;
+    const q = pegParse(replaced, { grammarSource: "aqn1.peggy" }) as Query;
+    if (/@\s*pretty\b/i.test(original)) {
+      q.modifier = "pretty";
+    }
+    return q;
   } catch (err) {
-    // Re-throw with original error semantics for callers to handle
-    // while preserving type narrowing for Peggy syntax errors.
     if (err instanceof PeggySyntaxError) {
       throw err;
     }
-    // Non-peggy errors should still propagate.
     throw err as unknown;
   }
 }

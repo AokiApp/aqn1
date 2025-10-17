@@ -1,10 +1,10 @@
 // AQN1 Peggy grammar
 //
 // Supports selectors: .index(n), .tag(t)
- // Supports modifiers: @tlv, @int, @count, @utf8, @hex, @auto
+ // Supports modifiers: @tlvhex, @tlv, @int, @count, @utf8, @hex, @auto, @type
 // Allows hexadecimal (0x..) and decimal numbers; indices are zero-based.
 //
- // AST: { type: "Query", selectors: [{type:"index", value:n}, {type:"tag", value:t}, ...], modifier: "int" | "tlv" | "count" | "utf8" | "hex" | "auto" | null }
+ // AST: { type: "Query", selectors: [{type:"index", value:n}, {type:"tag", value:t}, ...], modifier: "tlvhex" | "tlv" | "int" | "count" | "utf8" | "hex" | "auto" | "type" | null }
 //
 //
 start

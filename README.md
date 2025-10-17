@@ -6,27 +6,35 @@ Abstract Query Notation 1 (AQN1) is a formal language designed for retrieving AS
 
 The syntax of AQN1 is inspired by existing query languages, making it intuitive for users familiar with those. It allows for selecting, filtering, and transforming ASN.1 data structures.
 
+### Glossary
+
+- Element: A single ASN.1 data item, which can be either primitive (leaf) or constructed (branch).
+- Selector: A component of the query that specifies to retrieve certain elements based on their position or tag.
+- Modifier: A component of the query that specifies how to format or transform the output.
+- to select: The action of retrieving specific elements from the ASN.1 structure based on the query. You can not select multiple elements at once. 
+
 ### Basic Structure
 
 An AQN1 query consists of
-- **Selectors**: Used to navigate through the ASN.1 structure.
+- **Selectors**: Used to navigate through the ASN.1 elements.
 - **Modifiers**: Used to specify the output format or transformation.
 
 ### Selectors
 
-- `.index(n)`: Selects the nth element of a sequence or set. Indices are zero-based.
-- `.tag(t)`: Selects all elements with the specified tag `t`. Tags can be specified in decimal or hexadecimal (e.g., `0x02` for INTEGER).
+- `.index(n)`: Selects the nth element. Indices are zero-based.
+- `.tag(t)`: Selects the first element with the specified tag `t`. Tags can be specified in decimal or hexadecimal (e.g., `0x02` for INTEGER).
 
 ### Modifiers
 
-- `@tlv`: Outputs the selected data in binary format with Tag and Length headers.
-- `@int`: Outputs the selected data interpreted as an integer.
-- `@count`: Outputs the number of elements in the selected structure.
-- `@utf8`: Outputs the selected data decoded as a UTF-8 string.
-- `@hex`: Outputs the selected data in hexadecimal format without tag and length headers.
-- `@tlvhex`: Outputs the selected data in hexadecimal format with Tag and Length headers.
+- `@tlv`: Outputs the selected elements in binary format including Tag and Length headers. Of course, for constructed types, the output will include all nested elements and its headers.
+- `@int`: If the selected element is an INTEGER, outputs its value as a signed integer.
+- `@count`: If the selected element is a constructed type, outputs the number of elements in the constructed type.
+- `@utf8`: If the selected element is a string type (e.g., UTF8String, IA5String), outputs its value as a UTF-8 string.
+- `@hex`: If the selected element is a primitive type, outputs its value in hexadecimal format without Tag and Length headers. If the selected element is a constructed type, outputs the inner content in hexadecimal format. Each inner element has its Tag and Length headers, but the outer constructed type's Tag and Length headers are omitted.
+- `@tlvhex`: Outputs the selected data in hexadecimal format with Tag and Length headers. Both primitive and constructed types are supported and the full TLV structure is preserved.
 - `@auto`: Automatically determines the best output format based on the tag.
-- `@type`: Outputs the ASN.1 type of the selected element. e.g., INTEGER, OCTET STRING, SEQUENCE, [APPLICATION 3], [2], [PRIVATE 15], etc.
+- `@type`: Outputs the ASN.1 type of the selected element. e.g., INTEGER, OCTET STRING, SEQUENCE, APPLICATION 3, CONTEXT 0, PRIVATE 15, etc.
+- `@pretty`: Outputs a human-readable representation of the selected element, showing its structure and values in a formatted way.
 
 ### Example Queries
 
