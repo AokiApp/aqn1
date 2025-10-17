@@ -1,95 +1,214 @@
 # Abstract Query Notation 1 (AQN1)
 
-Abstract Query Notation 1 (AQN1) is a formal language designed for retrieving ASN.1 encoded data structures. It's just like jq for JSON, XPath for XML, but for ASN.1.
+AQN1 is a minimal query language for selecting and formatting ASN.1 TLV data. Think jq for JSON or XPath for XML—AQN1 for ASN.1.
+
+## Quickstart
+
+Given this ASN.1 DER-encoded structure (hex):
+
+```
+300a020105160548656c6c6f
+```
+
+It represents:
+
+- SEQUENCE
+  - INTEGER 5
+  - IA5String "Hello"
+
+Example queries:
+
+- Select the first element of the SEQUENCE and show its type:
+```
+.index(0).index(0)@type
+```
+Output:
+```
+INTEGER
+```
+
+- Select the second element of the SEQUENCE and show its UTF-8 value:
+```
+.index(0).index(1)@utf8
+```
+Output:
+```
+Hello
+```
+
+- Count immediate children of the first top-level SEQUENCE:
+```
+.index(0)@count
+```
+Output:
+```
+2
+```
+
+- Show the full TLV of the first top-level element as hex:
+```
+.index(0)@tlvhex
+```
+Output:
+```
+300a020105160548656c6c6f
+```
+
+## Concepts
+
+AQN1 operates on a single-selection model: each step refines the current selection to exactly one ASN.1 element. If a step cannot yield exactly one element, it is an error.
+
+- Element: One ASN.1 item, either primitive (leaf) or constructed (branch).
+- Selector: A step that changes the current selection (navigation).
+- Modifier: A terminal that formats the selected element for output.
+
+The initial selection is a synthetic root (constructed) whose children are the top-level TLVs from the input. For example, `.index(0)` selects the first top-level TLV.
 
 ## Syntax
 
-The syntax of AQN1 is inspired by existing query languages, making it intuitive for users familiar with those. It allows for selecting, filtering, and transforming ASN.1 data structures.
+An AQN1 query is a sequence of selectors followed by an optional modifier:
 
-### Glossary
-
-- Element: A single ASN.1 data item, which can be either primitive (leaf) or constructed (branch).
-- Selector: A component of the query that specifies to retrieve certain elements based on their position or tag.
-- Modifier: A component of the query that specifies how to format or transform the output.
-- to select: The action of retrieving specific elements from the ASN.1 structure based on the query. You can not select multiple elements at once. 
-
-### Basic Structure
-
-An AQN1 query consists of
-- **Selectors**: Used to navigate through the ASN.1 elements.
-- **Modifiers**: Used to specify the output format or transformation.
+```
+.selector(args).selector(args)...@modifier
+```
 
 ### Selectors
 
-- `.index(n)`: Selects the nth element. Indices are zero-based.
-- `.tag(t)`: Selects the first element with the specified tag `t`. Tags can be specified in decimal or hexadecimal (e.g., `0x02` for INTEGER).
-- `.decode()`: If OCTET STRING or BIT STRING is selected, decodes its content as ASN.1 and selects the resulting structure.
+- `.index(n)`: Select the nth immediate child of the current constructed element. Indices are zero-based. Using `index` on a primitive selection is an error.
+- `.tag(t)`: Depth-first search within the current selection’s subtree; select the first descendant whose first tag octet equals `t`. Tags may be decimal (e.g., `2`) or hexadecimal (e.g., `0x02`). The comparison is performed on the first tag octet (class + constructed bit + low 5 bits or 0x1f for long-form).
+- `.decode()`: If the current selection is an OCTET STRING or BIT STRING, decode its content as ASN.1 TLV and set the selection to the decoded root element. For BIT STRING, the first content byte (unused-bits count) is skipped. Chaining `decode()` is allowed.
 
 ### Modifiers
 
-- `@tlv`: Outputs the selected elements in binary format including Tag and Length headers. Of course, for constructed types, the output will include all nested elements and its headers.
-- `@int`: If the selected element is an INTEGER, outputs its value as a signed integer.
-- `@count`: If the selected element is a constructed type, outputs the number of elements in the constructed type.
-- `@utf8`: If the selected element is a string type (e.g., UTF8String, IA5String), outputs its value as a UTF-8 string.
-- `@hex`: If the selected element is a primitive type, outputs its value in hexadecimal format without Tag and Length headers. If the selected element is a constructed type, outputs the inner content in hexadecimal format. Each inner element has its Tag and Length headers, but the outer constructed type's Tag and Length headers are omitted.
-- `@tlvhex`: Outputs the selected data in hexadecimal format with Tag and Length headers. Both primitive and constructed types are supported and the full TLV structure is preserved.
-- `@auto`: Automatically determines the best output format based on the tag.
-- `@type`: Outputs the ASN.1 type of the selected element. e.g., INTEGER, OCTET STRING, SEQUENCE, APPLICATION 3, CONTEXT 0, PRIVATE 15, etc.
-- `@pretty`: Outputs a human-readable representation of the selected element, showing its structure and values in a formatted way.
+- `@tlv`: Output the selected element as binary TLV (Tag + Length + Value). For constructed types, the entire nested TLV is emitted. For indefinite-length encodings, the EOC (0x00 0x00) is preserved.
+- `@tlvhex`: Same as `@tlv` but hex-encoded (lowercase, no separators).
+- `@hex`: For primitive types, output the Value bytes in hex (no outer Tag/Length). For constructed types, output the inner content hex (concatenated TLVs of immediate children; outer Tag/Length omitted).
+- `@int`: If the selected element is INTEGER, output its signed integer value (DER semantics).
+- `@utf8`: If the selected element is a string type (e.g., UTF8String, IA5String, PrintableString, VisibleString, BMPString), output its value as UTF-8.
+- `@count`: If the selected element is constructed, output the number of immediate children.
+- `@type`: Output the ASN.1 type name of the selected element (e.g., INTEGER, OCTET STRING, SEQUENCE, APPLICATION n, CONTEXT n, PRIVATE n).
+- `@auto`: Choose an output automatically based on the type:
+  - INTEGER → `@int`
+  - String types → `@utf8`
+  - Constructed → `@tlv`
+  - Other primitive → `@hex`
+- `@pretty`: Human-readable layout of the selection (type, length, and nested elements).
 
-### Example Queries
+Note: `@pretty` is accepted by the parser wrapper even if it does not appear in the low-level grammar file; treat this section as the surface syntax.
 
-```
-.index(0).index(0x1)@tlv -- Selects the first element of a sequence, then the 2nd element of the resulting structure. The indices can be specified in decimal or hexadecimal. Lastly, the `@tlv` modifier indicates that the output should be in binary with Tag and Length headers.
-```
-
-```
-.tag(0x02)@int -- Selects all elements of tag 0x02 (Universal, primitive type, Integer). The tag can be specified in hexadecimal. The `@int` modifier indicates that the output should be interpreted as an integer.
-```
+### Grammar (EBNF)
 
 ```
-.tag(0xa0).index(1).tag(0x04)@hex -- Selects all elements of tag 0xa0 (Context-specific, constructed type). From those, it selects the 2nd element (index 1), and then selects all elements of tag 0x04 (Universal, primitive type, Octet String). The `@hex` modifier indicates that the output should be in hexadecimal format.
+Query      = Steps [Modifier] ;
+Steps      = Step { Step } ;
+Step       = "." Identifier "(" [ Argument ] ")" ;
+Identifier = "index" | "tag" | "decode" ;
+Argument   = Number | HexNumber ;
+Modifier   = "@" ( "tlv" | "tlvhex" | "int" | "count" | "utf8" | "hex" | "auto" | "type" | "pretty" ) ;
+Number     = DIGIT { DIGIT } ;
+HexNumber  = "0x" HEXDIGIT { HEXDIGIT } ;
 ```
 
+## Examples
+
+Using the same sample (`300a020105160548656c6c6f`):
+
+- First INTEGER value:
 ```
-.tag(0x16)@utf8 -- Selects all elements of tag 0x16 (Universal, primitive type, IA5String). The tag can be specified in hexadecimal. The `@utf8` modifier indicates that the output should be decoded as a UTF-8 string.
+.tag(0x02)@int
+```
+Output:
+```
+5
 ```
 
+- Second element’s raw value as hex:
 ```
-@utf8 -- Outputs the entire ASN.1 structure decoded as a UTF-8 string.
+.index(0).index(1)@hex
+```
+Output:
+```
+48656c6c6f
 ```
 
+- Type of the second element:
+```
+.index(0).index(1)@type
+```
+Output:
+```
+IA5String
+```
+
+- Pretty-print the first top-level element:
+```
+.index(0)@pretty
+```
+Output (example):
+```
+SEQUENCE (constructed), length=10
+  INTEGER, length=1
+    INTEGER: 5
+  IA5String, length=5
+    String: "Hello"
+```
+
+- Decode nested ASN.1 from OCTET STRING (example pattern):
+```
+.tag(0x04).decode()@count
+```
+
+## CLI
+
+AQN1 includes an optional command-line tool.
+
+### Install and run
+
+- Run with npx (no install):
+```
+npx @aokiapp/aqn1 ".index(0)@type" < data.asn1
+```
+
+- Install globally:
+```
+npm install -g @aokiapp/aqn1
+aqn1 ".index(0).index(1)@utf8" < data.asn1
+```
+
+### Inputs
+
+- Reads TLV bytes from stdin.
+
+### Exit codes
+
+- `0`: Success
+- `1`: Any error (invalid query, selection/type mismatch, decode errors, I/O errors)
+
+### Help
+
+```
+npx @aokiapp/aqn1 --help
+npx @aokiapp/aqn1 --version
+```
 
 ## Errors
 
-The following errors may be encountered when using AQN1:
-- **Invalid Query Syntax**: The query does not conform to the AQN1 grammar.
-- **Index Out of Bounds**: An index specified in the query exceeds the number of elements in the selected structure.
-- **Tag Not Found**: No elements with the specified tag exist in the selected structure.
-- **Invalid Modifier**: A modifier specified in the query is not recognized.
-- **Incompatible Output Format**: The selected data cannot be represented in the specified output format (e.g., trying to interpret a non-integer as an integer).
-- **Value Error**: The selected value cannot be processed as requested (e.g., decoding a non-string value as UTF-8).
+- Invalid Query Syntax: The query does not conform to the grammar.
+- Index Out of Bounds: `index(n)` exceeds the child count, or current selection is not constructed.
+- Tag Not Found: No matching descendant whose first tag octet equals `t`.
+- Invalid Modifier: Unknown or unsupported modifier.
+- Incompatible Output Format: Selected data cannot be represented in the requested format (e.g., `@int` on non-INTEGER, `@count` on primitive).
+- Value Error: Selected value cannot be processed as requested (e.g., non-UTF8 string for `@utf8`, failed inner decode).
+- Empty Selection: No selection available to format.
 
-## CLI Tool
+## Notes and limitations
 
-An optional command-line tool is bundled.
-
-### Usage
-
-
-```bash
-npx @aokiapp/aqn1 ".index(0).tag(0x02)@int" < data.asn1
-```
-
-### Options
-- `-h, --help`: Display help information about the CLI tool.
-- `-v, --version`: Display the version of the CLI tool.
-
+- Tag comparisons use the first tag octet. For long-form tag numbers (≥ 31), the first octet is 0x1f (plus class/constructed bits). Therefore, `.tag(0x1f)` (or `0x5f/0x9f/0xdf` for other classes) matches any long-form tag in that class/constructed combination; exact long-form tag-number matching is not yet supported.
+- `.tag(t)` searches depth-first within the current selection’s subtree and returns the first match.
+- Definite and indefinite lengths are supported. For indefinite-length values, `@tlv` preserves the trailing EOC.
+- DER/BER inputs are supported when provided as TLV bytes.
 
 ## License
 
-This project is licensed under the AokiApp Normative Applicable License - Tight (ANAL-Tight). See [License](https://github.com/AokiApp/ANAL/blob/main/licenses/ANAL-Tight-1.0.1.md) for details.
-
-
-
-
+This project is licensed under the AokiApp Normative Applicable License - Tight (ANAL-Tight). See License:
+https://github.com/AokiApp/ANAL/blob/main/licenses/ANAL-Tight-1.0.1.md
