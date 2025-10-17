@@ -1,0 +1,24 @@
+{
+  "name": "@aokiapp/aqn1",
+  "version": "1.0.0",
+  "description": "Abstract Query Notation 1 (AQN1) library and CLI using @aokiapp/tlv",
+  "license": "SEE LICENSE IN README.md",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "aqn1": "bin/aqn1"
+  },
+  "scripts": {
+    "build": "tsc",
+    "genPeggy": "npx peggy -o src/aqn1parser.gen.js --format es aqn1.peggy"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "peggy": "^5.0.6",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@aokiapp/tlv": "^0.2.1"
+  }
+}
