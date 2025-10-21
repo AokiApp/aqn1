@@ -17,6 +17,7 @@
  */
 
 import { parseQuery, Query, Selector, isIndexSelector, isTagSelector, isDecodeSelector, Modifier } from "./index.js";
+import { BasicTLVParser } from "@aokiapp/tlv/parser";
 
 // Tag class enum as strings for display
 type TagClassName = "UNIVERSAL" | "APPLICATION" | "CONTEXT" | "PRIVATE";
@@ -70,122 +71,50 @@ function parseOneTLV(buf: Uint8Array, pos: number, end: number): { node: TLVNode
     throw new Error("Invalid Query Syntax: Unexpected end of input TLV");
   }
 
-  // Parse tag
-  const first = buf[pos++];
-  const tagClassBits = (first & 0xc0) >>> 6;
-  const tagClass: TagClassName =
-    tagClassBits === 0 ? "UNIVERSAL" : tagClassBits === 1 ? "APPLICATION" : tagClassBits === 2 ? "CONTEXT" : "PRIVATE";
-  const constructed = (first & 0x20) !== 0;
-  let tagNumberLow5 = first & 0x1f;
-  let tagNumber = tagNumberLow5;
-  const tagHeaderBytes: number[] = [first];
-  if (tagNumberLow5 === 0x1f) {
-    // Long-form tag number
-    tagNumber = 0;
-    while (true) {
-      if (pos >= end) {
-        throw new Error("Invalid Query Syntax: Unterminated long-form tag number");
-      }
-      const b = buf[pos++];
-      tagHeaderBytes.push(b);
-      tagNumber = (tagNumber << 7) | (b & 0x7f);
-      if ((b & 0x80) === 0) break;
-    }
+  // Use library parser to decode the next TLV from remaining bytes
+  const remainder = buf.slice(pos, end);
+  let res;
+  try {
+    res = BasicTLVParser.parse(remainder.buffer);
+  } catch (e: any) {
+    throw new Error(e?.message ?? "TLV Parse Error");
   }
 
-  // Parse length
-  if (pos >= end) {
-    throw new Error("Invalid Query Syntax: Missing length");
-  }
-  const lenFirst = buf[pos++];
-  const lengthHeaderBytes: number[] = [lenFirst];
-  let length: number | null = null;
-  let indefinite = false;
-  if (lenFirst === 0x80) {
-    // Indefinite length for constructed types
-    indefinite = true;
-  } else if (lenFirst < 0x80) {
-    length = lenFirst;
-  } else {
-    const numBytes = lenFirst & 0x7f;
-    if (numBytes === 0) {
-      throw new Error("Invalid Query Syntax: Reserved length-of-length");
-    }
-    if (pos + numBytes > end) {
-      throw new Error("Invalid Query Syntax: Length extends beyond buffer");
-    }
-    let l = 0;
-    for (let i = 0; i < numBytes; i++) {
-      const b = buf[pos++];
-      lengthHeaderBytes.push(b);
-      l = (l << 8) | b;
-    }
-    length = l;
-  }
+  const consumed = res.endOffset;
+  const contentBytes = new Uint8Array(res.value);
+  const headerLength = consumed - contentBytes.length;
 
-  const headerBytes = new Uint8Array([...tagHeaderBytes, ...lengthHeaderBytes]);
+  const fullBytes = buf.slice(startPos, startPos + consumed);
+  const headerBytes = buf.slice(startPos, startPos + headerLength);
 
-  // Parse content and children
-  let contentBytes = new Uint8Array(0);
+  const tagClassName: TagClassName =
+    res.tag.tagClass === 0 ? "UNIVERSAL" : res.tag.tagClass === 1 ? "APPLICATION" : res.tag.tagClass === 2 ? "CONTEXT" : "PRIVATE";
+
+  const tagFirstOctet =
+    ((res.tag.tagClass & 0x03) << 6) |
+    (res.tag.constructed ? 0x20 : 0x00) |
+    (res.tag.tagNumber < 31 ? (res.tag.tagNumber & 0x1f) : 0x1f);
+
   let children: TLVNode[] = [];
-  let fullBytes: Uint8Array;
-  let nextPos = pos;
-
-  if (indefinite) {
-    // Read until EOC 0x00 0x00 for current constructed value
-    const contentStart = pos;
-    // Accumulate nested TLVs until EOC for current level
-    const nested: TLVNode[] = [];
-    while (true) {
-      if (nextPos + 1 > end) {
-        throw new Error("Invalid Query Syntax: Missing EOC for indefinite-length value");
-      }
-      if (buf[nextPos] === 0x00 && buf[nextPos + 1] === 0x00) {
-        // End of content for this indefinite value
-        const eocStart = nextPos;
-        const eocEnd = nextPos + 2;
-        contentBytes = buf.slice(contentStart, eocStart);
-        fullBytes = buf.slice(startPos, eocEnd);
-        nextPos = eocEnd;
-        break;
-      }
-      const { node: child, nextPos: np } = parseOneTLV(buf, nextPos, end);
-      nested.push(child);
-      nextPos = np;
-    }
-    children = constructed ? nested : [];
-  } else {
-    // Definite length
-    if (length === null) {
-      throw new Error("Invalid Query Syntax: Definite-length not computed");
-    }
-    const contentStart = pos;
-    const contentEnd = pos + length;
-    if (contentEnd > end) {
-      throw new Error("Invalid Query Syntax: Content length exceeds buffer");
-    }
-    contentBytes = buf.slice(contentStart, contentEnd);
-    fullBytes = buf.slice(startPos, contentEnd);
-    nextPos = contentEnd;
-
-    if (constructed) {
-      children = parseTLVStream(buf, contentStart, contentEnd);
-    }
+  if (res.tag.constructed) {
+    children = parseTLVStream(contentBytes, 0, contentBytes.length);
   }
 
   const node: TLVNode = {
     offset: startPos,
-    tagFirstOctet: first,
-    tagClass,
-    constructed,
-    tagNumber,
-    length,
-    indefinite,
+    tagFirstOctet,
+    tagClass: tagClassName,
+    constructed: res.tag.constructed,
+    tagNumber: res.tag.tagNumber,
+    length: res.length,
+    indefinite: false,
     headerBytes,
     contentBytes,
     fullBytes,
     children,
   };
+
+  const nextPos = startPos + consumed;
   return { node, nextPos };
 }
 
