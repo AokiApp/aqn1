@@ -60,7 +60,7 @@ export function parseQuery(input: string): Query {
     if (err instanceof PeggySyntaxError) {
       throw err;
     }
-    throw err as unknown;
+    throw err;
   }
 }
 

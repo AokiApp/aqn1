@@ -92,8 +92,9 @@ function parseOneTLV(
   let res;
   try {
     res = BasicTLVParser.parse(remainder.buffer);
-  } catch (e: any) {
-    throw new Error(e?.message ?? "TLV Parse Error");
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : undefined;
+    throw new Error(msg ?? "TLV Parse Error");
   }
 
   const consumed = res.endOffset;
@@ -330,7 +331,7 @@ function select(root: TLVNode, selectors: Selector[]): TLVNode {
       let children: TLVNode[];
       try {
         children = parseTLVStream(inner);
-      } catch (e: any) {
+      } catch {
         throw new Error("Value Error: Failed to decode inner ASN.1 content");
       }
       const syntheticDecodedRoot: TLVNode = {
@@ -423,7 +424,7 @@ export function parseAndEvaluate(
       }
       try {
         out.text = utf8Decoder.decode(selected.contentBytes);
-      } catch (e: any) {
+      } catch {
         throw new Error("Value Error: Failed to decode UTF-8 string");
       }
       break;

@@ -6,7 +6,7 @@ declare module "./aqn1parser.gen.js" {
   }
 
   export class SyntaxError extends Error {
-    expected?: any[];
+    expected?: unknown[];
     found?: string | null;
     location: Location;
     format?(sources: { source: string; text: string }[]): string;
@@ -16,12 +16,12 @@ declare module "./aqn1parser.gen.js" {
     grammarSource?: string;
     startRule?: "start";
     peg$currPos?: number;
-    peg$maxFailExpected?: any[];
+    peg$maxFailExpected?: unknown[];
     peg$silentFails?: number;
     peg$library?: boolean;
   };
 
-  export function parse(input: string, options?: ParseOptions): any;
+  export function parse(input: string, options?: ParseOptions): unknown;
 
   export const StartRules: string[];
 }

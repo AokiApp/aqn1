@@ -28,8 +28,12 @@ function getVersion(): string {
     const __dirname = path.dirname(__filename);
     const pkgPath = path.resolve(__dirname, "../../package.json");
     const pkgText = fs.readFileSync(pkgPath, "utf8");
-    const pkg = JSON.parse(pkgText);
-    return pkg.version ?? "unknown";
+    const pkgUnknown: unknown = JSON.parse(pkgText);
+    if (pkgUnknown && typeof pkgUnknown === "object" && "version" in pkgUnknown) {
+      const v = (pkgUnknown as Record<string, unknown>).version;
+      return typeof v === "string" ? v : "unknown";
+    }
+    return "unknown";
   } catch {
     return "unknown";
   }
@@ -80,8 +84,13 @@ export async function main(): Promise<void> {
     } else {
       // No output; exit success
     }
-  } catch (e: any) {
-    const msg = e?.message ?? String(e);
+  } catch (e: unknown) {
+    const msg =
+      e instanceof Error
+        ? e.message
+        : typeof e === "string"
+          ? e
+          : JSON.stringify(e);
     console.error(msg);
     process.exitCode = 1;
   }

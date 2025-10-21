@@ -9,13 +9,15 @@ function runSample(query: string) {
     console.log(`Query: ${query}`);
     console.log(JSON.stringify(ast, null, 2));
     console.log("---");
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error(`Failed to parse: ${query}`);
-    if (e && e.message) {
-      console.error(e.message);
-    } else {
-      console.error(e);
-    }
+    const msg =
+      e instanceof Error
+        ? e.message
+        : typeof e === "string"
+          ? e
+          : JSON.stringify(e);
+    console.error(msg);
     console.log("---");
   }
 }
