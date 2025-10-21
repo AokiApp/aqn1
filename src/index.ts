@@ -7,7 +7,17 @@ import {
 } from "./aqn1parser.gen.js";
 
 /** Modifier type specifies output transformation modifiers. */
-export type Modifier = "tlv" | "tlvhex" | "int" | "count" | "utf8" | "hex" | "auto" | "type" | "pretty" | null;
+export type Modifier =
+  | "tlv"
+  | "tlvhex"
+  | "int"
+  | "count"
+  | "utf8"
+  | "hex"
+  | "auto"
+  | "type"
+  | "pretty"
+  | null;
 
 /** Selector discriminated unions */
 export interface IndexSelector {

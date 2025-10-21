@@ -19,37 +19,49 @@ It represents:
 Example queries:
 
 - Select the first element of the SEQUENCE and show its type:
+
 ```
 .index(0).index(0)@type
 ```
+
 Output:
+
 ```
 INTEGER
 ```
 
 - Select the second element of the SEQUENCE and show its UTF-8 value:
+
 ```
 .index(0).index(1)@utf8
 ```
+
 Output:
+
 ```
 Hello
 ```
 
 - Count immediate children of the first top-level SEQUENCE:
+
 ```
 .index(0)@count
 ```
+
 Output:
+
 ```
 2
 ```
 
 - Show the full TLV of the first top-level element as hex:
+
 ```
 .index(0)@tlvhex
 ```
+
 Output:
+
 ```
 300a020105160548656c6c6f
 ```
@@ -114,37 +126,49 @@ HexNumber  = "0x" HEXDIGIT { HEXDIGIT } ;
 Using the same sample (`300a020105160548656c6c6f`):
 
 - First INTEGER value:
+
 ```
 .tag(0x02)@int
 ```
+
 Output:
+
 ```
 5
 ```
 
 - Second element’s raw value as hex:
+
 ```
 .index(0).index(1)@hex
 ```
+
 Output:
+
 ```
 48656c6c6f
 ```
 
 - Type of the second element:
+
 ```
 .index(0).index(1)@type
 ```
+
 Output:
+
 ```
 IA5String
 ```
 
 - Pretty-print the first top-level element:
+
 ```
 .index(0)@pretty
 ```
+
 Output (example):
+
 ```
 SEQUENCE (constructed), length=10
   INTEGER, length=1
@@ -154,6 +178,7 @@ SEQUENCE (constructed), length=10
 ```
 
 - Decode nested ASN.1 from OCTET STRING (example pattern):
+
 ```
 .tag(0x04).decode()@count
 ```
@@ -165,11 +190,13 @@ AQN1 includes an optional command-line tool.
 ### Install and run
 
 - Run with npx (no install):
+
 ```
 npx @aokiapp/aqn1 ".index(0)@type" < data.asn1
 ```
 
 - Install globally:
+
 ```
 npm install -g @aokiapp/aqn1
 aqn1 ".index(0).index(1)@utf8" < data.asn1

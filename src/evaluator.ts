@@ -16,7 +16,15 @@
  *  - Selection is always a single node.
  */
 
-import { parseQuery, Query, Selector, isIndexSelector, isTagSelector, isDecodeSelector, Modifier } from "./index.js";
+import {
+  parseQuery,
+  Query,
+  Selector,
+  isIndexSelector,
+  isTagSelector,
+  isDecodeSelector,
+  Modifier,
+} from "./index.js";
 import { BasicTLVParser } from "@aokiapp/tlv/parser";
 
 // Tag class enum as strings for display
@@ -26,17 +34,17 @@ type TagClassName = "UNIVERSAL" | "APPLICATION" | "CONTEXT" | "PRIVATE";
  * TLV Node representation
  */
 interface TLVNode {
-  offset: number;           // byte offset in the original buffer where the TLV starts
-  tagFirstOctet: number;    // first tag octet (used by queries)
-  tagClass: TagClassName;   // derived from bits 8..7 of first tag octet
-  constructed: boolean;     // derived from bit 6 (0x20) of first tag octet
-  tagNumber: number;        // full tag number; for long-form tags, computed across subsequent tag bytes
-  length: number | null;    // content length for definite-length; null for indefinite
-  indefinite: boolean;      // true when length octet is 0x80
-  headerBytes: Uint8Array;  // tag + length bytes
+  offset: number; // byte offset in the original buffer where the TLV starts
+  tagFirstOctet: number; // first tag octet (used by queries)
+  tagClass: TagClassName; // derived from bits 8..7 of first tag octet
+  constructed: boolean; // derived from bit 6 (0x20) of first tag octet
+  tagNumber: number; // full tag number; for long-form tags, computed across subsequent tag bytes
+  length: number | null; // content length for definite-length; null for indefinite
+  indefinite: boolean; // true when length octet is 0x80
+  headerBytes: Uint8Array; // tag + length bytes
   contentBytes: Uint8Array; // content bytes (TLV value)
-  fullBytes: Uint8Array;    // entire TLV (header + content + optional EOC for indefinite)
-  children: TLVNode[];      // decoded nested TLVs if constructed; empty for primitives
+  fullBytes: Uint8Array; // entire TLV (header + content + optional EOC for indefinite)
+  children: TLVNode[]; // decoded nested TLVs if constructed; empty for primitives
 }
 
 /**
@@ -51,7 +59,11 @@ function toHex(buf: Uint8Array): string {
 /**
  * Parse a stream of TLVs between [start, end)
  */
-function parseTLVStream(buf: Uint8Array, start = 0, end = buf.length): TLVNode[] {
+function parseTLVStream(
+  buf: Uint8Array,
+  start = 0,
+  end = buf.length,
+): TLVNode[] {
   const nodes: TLVNode[] = [];
   let pos = start;
   while (pos < end) {
@@ -65,7 +77,11 @@ function parseTLVStream(buf: Uint8Array, start = 0, end = buf.length): TLVNode[]
 /**
  * Parse one TLV at position pos. End is the parsing boundary (exclusive).
  */
-function parseOneTLV(buf: Uint8Array, pos: number, end: number): { node: TLVNode; nextPos: number } {
+function parseOneTLV(
+  buf: Uint8Array,
+  pos: number,
+  end: number,
+): { node: TLVNode; nextPos: number } {
   const startPos = pos;
   if (pos >= end) {
     throw new Error("Invalid Query Syntax: Unexpected end of input TLV");
@@ -88,12 +104,18 @@ function parseOneTLV(buf: Uint8Array, pos: number, end: number): { node: TLVNode
   const headerBytes = buf.slice(startPos, startPos + headerLength);
 
   const tagClassName: TagClassName =
-    res.tag.tagClass === 0 ? "UNIVERSAL" : res.tag.tagClass === 1 ? "APPLICATION" : res.tag.tagClass === 2 ? "CONTEXT" : "PRIVATE";
+    res.tag.tagClass === 0
+      ? "UNIVERSAL"
+      : res.tag.tagClass === 1
+        ? "APPLICATION"
+        : res.tag.tagClass === 2
+          ? "CONTEXT"
+          : "PRIVATE";
 
   const tagFirstOctet =
     ((res.tag.tagClass & 0x03) << 6) |
     (res.tag.constructed ? 0x20 : 0x00) |
-    (res.tag.tagNumber < 31 ? (res.tag.tagNumber & 0x1f) : 0x1f);
+    (res.tag.tagNumber < 31 ? res.tag.tagNumber & 0x1f : 0x1f);
 
   let children: TLVNode[] = [];
   if (res.tag.constructed) {
@@ -174,8 +196,8 @@ function typeOf(node: TLVNode): string {
     node.tagClass === "APPLICATION"
       ? "APPLICATION"
       : node.tagClass === "CONTEXT"
-      ? "CONTEXT"
-      : "PRIVATE";
+        ? "CONTEXT"
+        : "PRIVATE";
   return `${cls} ${node.tagNumber}`;
 }
 
@@ -217,7 +239,11 @@ function isStringNode(node: TLVNode): boolean {
  * Choose an automatic modifier based on tag
  */
 function chooseAuto(node: TLVNode): Modifier {
-  if (node.tagClass === "UNIVERSAL" && !node.constructed && node.tagNumber === 2) {
+  if (
+    node.tagClass === "UNIVERSAL" &&
+    !node.constructed &&
+    node.tagNumber === 2
+  ) {
     return "int";
   }
   if (isStringNode(node)) {
@@ -267,7 +293,9 @@ function select(root: TLVNode, selectors: Selector[]): TLVNode {
   for (const sel of selectors) {
     if (isIndexSelector(sel)) {
       if (!current.constructed) {
-        throw new Error("Index Out of Bounds: Current selection is not constructed");
+        throw new Error(
+          "Index Out of Bounds: Current selection is not constructed",
+        );
       }
       if (sel.value < 0 || sel.value >= current.children.length) {
         throw new Error("Index Out of Bounds");
@@ -281,8 +309,15 @@ function select(root: TLVNode, selectors: Selector[]): TLVNode {
       current = found;
     } else if (isDecodeSelector(sel)) {
       // Decode inner ASN.1 TLVs from OCTET STRING or BIT STRING content
-      if (!(current.tagClass === "UNIVERSAL" && (current.tagNumber === 4 || current.tagNumber === 3))) {
-        throw new Error("Value Error: Selected element is not OCTET STRING or BIT STRING");
+      if (
+        !(
+          current.tagClass === "UNIVERSAL" &&
+          (current.tagNumber === 4 || current.tagNumber === 3)
+        )
+      ) {
+        throw new Error(
+          "Value Error: Selected element is not OCTET STRING or BIT STRING",
+        );
       }
       let inner = current.contentBytes;
       if (current.tagNumber === 3) {
@@ -323,7 +358,10 @@ function select(root: TLVNode, selectors: Selector[]): TLVNode {
  * Public API for CLI and library
  * Parse query, parse TLV, evaluate, and format output
  */
-export function parseAndEvaluate(input: Uint8Array, queryText: string): { output: { binary?: Uint8Array; text?: string } } {
+export function parseAndEvaluate(
+  input: Uint8Array,
+  queryText: string,
+): { output: { binary?: Uint8Array; text?: string } } {
   const ast: Query = parseQuery(queryText);
   const top = parseTLVStream(input);
   const syntheticRoot: TLVNode = {
@@ -356,20 +394,32 @@ export function parseAndEvaluate(input: Uint8Array, queryText: string): { output
       out.text = toHex(selected.contentBytes);
       break;
     case "int":
-      if (!(selected.tagClass === "UNIVERSAL" && !selected.constructed && selected.tagNumber === 2)) {
-        throw new Error("Incompatible Output Format: Selected element is not INTEGER");
+      if (
+        !(
+          selected.tagClass === "UNIVERSAL" &&
+          !selected.constructed &&
+          selected.tagNumber === 2
+        )
+      ) {
+        throw new Error(
+          "Incompatible Output Format: Selected element is not INTEGER",
+        );
       }
       out.text = decodeInteger(selected.contentBytes);
       break;
     case "count":
       if (!selected.constructed) {
-        throw new Error("Incompatible Output Format: Selected element is not constructed");
+        throw new Error(
+          "Incompatible Output Format: Selected element is not constructed",
+        );
       }
       out.text = String(selected.children.length);
       break;
     case "utf8":
       if (!isStringNode(selected)) {
-        throw new Error("Value Error: Selected value is not a supported string type");
+        throw new Error(
+          "Value Error: Selected value is not a supported string type",
+        );
       }
       try {
         out.text = utf8Decoder.decode(selected.contentBytes);

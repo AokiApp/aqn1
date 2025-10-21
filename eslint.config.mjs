@@ -22,7 +22,7 @@ export default tseslint.config(
       "eslint.config.mjs",
       "gen/**",
       "src/aqn1parser.gen.js",
-      "bin/**"
+      "bin/**",
     ],
   },
   {

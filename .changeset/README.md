@@ -29,6 +29,7 @@ This repository uses Changesets to manage versioning, changelogs, and releases.
 ## Configuration
 
 See `.changeset/config.json` for settings:
+
 - `changelog`: `@changesets/changelog-git` for git-style entries
 - `commit`: `true` to auto-commit versioning changes
 - `baseBranch`: `main`
