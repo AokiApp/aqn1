@@ -11,12 +11,16 @@
   },
   "scripts": {
     "build": "tsc",
-    "genPeggy": "npx peggy -o src/aqn1parser.gen.js --format es aqn1.peggy"
+    "genPeggy": "npx peggy -o src/aqn1parser.gen.js --format es aqn1.peggy",
+    "changelog": "changeset",
+    "version": "changeset version",
+    "release": "npm run build && changeset publish"
   },
   "devDependencies": {
     "@types/node": "^22.7.5",
     "peggy": "^5.0.6",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "@changesets/cli": "^2.29.5"
   },
   "dependencies": {
     "@aokiapp/tlv": "^0.3.0"
