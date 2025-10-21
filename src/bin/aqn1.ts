@@ -29,7 +29,11 @@ function getVersion(): string {
     const pkgPath = path.resolve(__dirname, "../../package.json");
     const pkgText = fs.readFileSync(pkgPath, "utf8");
     const pkgUnknown: unknown = JSON.parse(pkgText);
-    if (pkgUnknown && typeof pkgUnknown === "object" && "version" in pkgUnknown) {
+    if (
+      pkgUnknown &&
+      typeof pkgUnknown === "object" &&
+      "version" in pkgUnknown
+    ) {
       const v = (pkgUnknown as Record<string, unknown>).version;
       return typeof v === "string" ? v : "unknown";
     }
