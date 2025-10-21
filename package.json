@@ -19,6 +19,6 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
-    "@aokiapp/tlv": "^0.2.1"
+    "@aokiapp/tlv": "^0.3.0"
   }
 }
