@@ -9,6 +9,7 @@
   "bin": {
     "aqn1": "bin/aqn1"
   },
+  "repository": "https://github.com/aokiapp/aqn1.git",
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
