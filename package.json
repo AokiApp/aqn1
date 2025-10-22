@@ -1,6 +1,6 @@
 {
   "name": "@aokiapp/aqn1",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Abstract Query Notation 1 (AQN1) library and CLI using @aokiapp/tlv",
   "license": "SEE LICENSE IN README.md",
   "type": "module",

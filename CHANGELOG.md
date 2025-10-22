@@ -1,5 +1,11 @@
 # @aokiapp/aqn1
 
+## 0.0.4
+
+### Patch Changes
+
+- 854a0e5: bump upstream version
+
 ## 0.0.3
 
 ### Patch Changes
