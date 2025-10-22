@@ -25,6 +25,9 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           cache: "npm"
 
+      - name: Install latest npm
+        run: npm install -g npm@latest
+
       # Use npm install (not npm ci) because package-lock.json may not yet include @changesets/cli
       - name: Install dependencies
         run: npm install
