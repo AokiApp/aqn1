@@ -1,5 +1,11 @@
 # @aokiapp/aqn1
 
+## 0.0.5
+
+### Patch Changes
+
+- ed5b02d: republish due to trusted publishing & provenance
+
 ## 0.0.4
 
 ### Patch Changes
