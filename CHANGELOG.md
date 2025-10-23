@@ -1,5 +1,11 @@
 # @aokiapp/aqn1
 
+## 0.1.0
+
+### Minor Changes
+
+- f652d6b: added -f option to include file from args
+
 ## 0.0.6
 
 ### Patch Changes
