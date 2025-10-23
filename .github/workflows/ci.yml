@@ -20,12 +20,16 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+        if: always()
 
       - name: Lint
         run: npm run lint
+        if: always()
 
       - name: Check formatting
         run: npm run format:check
+        if: always()
 
       - name: Build
         run: npm run build
+        if: always()
