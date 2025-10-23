@@ -1,5 +1,11 @@
 # @aokiapp/aqn1
 
+## 0.0.6
+
+### Patch Changes
+
+- a25b1a0: enhanec help
+
 ## 0.0.5
 
 ### Patch Changes
