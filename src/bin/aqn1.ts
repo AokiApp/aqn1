@@ -14,10 +14,12 @@ Think jq for JSON or XPath for XML—AQN1 for ASN.1.
 
 USAGE:
   aqn1 "<query>" < data.asn1
+  aqn1 "<query>" -f <path>
 
 OPTIONS:
   -h, --help     Show this help message
   -v, --version  Show version number
+  -f, --file     Read TLV bytes from file path (Windows-friendly)
 
 QUERY SYNTAX:
   Query = [.selector(args)]...[@modifier]
@@ -41,7 +43,7 @@ MODIFIERS:
   @pretty        Human-readable tree layout with types and values
 
 INPUT:
-  Reads ASN.1 TLV bytes from stdin (DER/BER format supported)
+  Reads ASN.1 TLV bytes from stdin (DER/BER format supported), or from -f <path>
 
 OUTPUT:
   Results written to stdout (binary for @tlv, text for others)
@@ -54,6 +56,7 @@ EXAMPLES:
   # Basic selection
   aqn1 ".index(0)@type" < data.asn1                    # Type of first element
   aqn1 ".index(0).index(1)@utf8" < data.asn1          # UTF-8 value of nested element
+  aqn1 ".index(0)@type" -f data.asn1                  # Using -f file input
   
   # Tag-based selection
   aqn1 ".tag(0x02)@int" < data.asn1                    # First INTEGER value
@@ -134,23 +137,69 @@ export async function main(): Promise<void> {
     console.log(getVersion());
     return;
   }
-  const queryArg = args.find((a) => !a.startsWith("-"));
+  // Extract query (first non-option argument)
+  const queryArg = args.find((a) => !a.startsWith("-") && !a.startsWith("--file="));
   if (!queryArg) {
     console.error("Error: Missing query argument.");
     printHelp();
     process.exitCode = 1;
     return;
   }
+
+  // Extract -f/--file option
+  let filePath: string | undefined;
+  const eqOpt = args.find((a) => a.startsWith("--file="));
+  if (eqOpt) {
+    const p = eqOpt.slice("--file=".length);
+    if (!p) {
+      console.error("Error: --file requires a path.");
+      process.exitCode = 1;
+      return;
+    }
+    filePath = p;
+  } else {
+    const fIdx = args.findIndex((a) => a === "-f" || a === "--file");
+    if (fIdx !== -1) {
+      const next = args[fIdx + 1];
+      if (!next || next.startsWith("-")) {
+        console.error("Error: -f/--file requires a path argument.");
+        process.exitCode = 1;
+        return;
+      }
+      filePath = next;
+    }
+  }
+
   try {
-    const input = await readStdin();
+    let input: Uint8Array;
+    if (filePath) {
+      try {
+        const fileData = await fs.promises.readFile(filePath);
+        input = new Uint8Array(fileData);
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : typeof err === "string" ? err : JSON.stringify(err);
+        console.error(`Input Read Error: ${msg}`);
+        process.exitCode = 1;
+        return;
+      }
+    } else {
+      input = await readStdin();
+    }
+
+    if (!input || input.length === 0) {
+      console.error("Error: No input data. Provide TLV bytes via stdin or -f <path>.");
+      process.exitCode = 1;
+      return;
+    }
+
     const { output } = parseAndEvaluate(input, queryArg);
     if (output.binary) {
       process.stdout.write(Buffer.from(output.binary));
     } else if (output.text) {
       process.stdout.write(output.text + "\n");
-    } else {
-      // No output; exit success
     }
+    // success
   } catch (e: unknown) {
     const msg =
       e instanceof Error

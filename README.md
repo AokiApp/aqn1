@@ -204,7 +204,14 @@ aqn1 ".index(0).index(1)@utf8" < data.asn1
 
 ### Inputs
 
-- Reads TLV bytes from stdin.
+- Reads TLV bytes from stdin by default.
+- Alternatively, provide a file path with -f or --file:
+
+```
+npx @aokiapp/aqn1 ".index(0)@type" -f data.asn1
+```
+
+- On Windows, prefer -f to avoid stdin piping issues.
 
 ### Exit codes
 
