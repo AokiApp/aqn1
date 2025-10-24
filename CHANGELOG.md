@@ -1,5 +1,11 @@
 # @aokiapp/aqn1
 
+## 0.1.1
+
+### Patch Changes
+
+- 5a2df24: empty release for provenance
+
 ## 0.1.0
 
 ### Minor Changes
